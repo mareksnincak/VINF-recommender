@@ -2,15 +2,15 @@ import numpy as np
 import pandas as pd
 
 IN_FILE = 'data/events_train.csv'
-OUT_FILE = 'data/events_part.csv'
+OUT_FILE = 'data/events_recent.csv'
 CHUNK_SIZE = 10 ** 6
-ENTRIES_FROM_CHUNK = 1000
+FROM_DATE = '2019-08-24'
 
 try:
   result = pd.DataFrame()
   for partial_data in pd.read_csv(IN_FILE, chunksize=CHUNK_SIZE, low_memory=False):
-    partial_result = partial_data.sample(n=ENTRIES_FROM_CHUNK)
-    result = result.append(partial_result)
+    filtered = partial_data[partial_data['timestamp'] >= FROM_DATE]
+    result = result.append(filtered)
 
   result.to_csv(OUT_FILE, index=False)
 except:
