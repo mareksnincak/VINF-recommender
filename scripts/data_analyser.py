@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-IN_FILE = 'data/events_train.csv'
+IN_FILE = 'data/dataset.csv'
 FIELDS_TO_ANALYZE = pd.read_csv(IN_FILE, nrows=1).columns.tolist()
 
 try:
