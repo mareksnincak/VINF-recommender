@@ -10,7 +10,15 @@ IN_FILE = 'data/merged/merged.csv'
 PURCHASE_WEIGHT = 3
 MIN_INTERACTIONS = 0
 
-data = pd.read_csv(IN_FILE)
+data = pd.read_csv(IN_FILE, dtype={
+  'customer_id': object,
+  'timestamp': object,
+  'event_type': object,
+  'product_id': object,
+  'title': object,
+  'category_name': object,
+  'price': float,
+})
 
 # test train split
 train, test = train_test_split(data.sort_values(by=['timestamp']), test_size=0.2)
