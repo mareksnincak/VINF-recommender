@@ -4,6 +4,7 @@ import pandas as pd
 import math
 
 from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import svds
 from sklearn.model_selection import train_test_split
 
 IN_FILE = 'data/recent/recent_merged_hour.csv'
@@ -38,7 +39,7 @@ class Recommender:
       .groupby(['customer_id', 'title'])\
       .agg({'customer_id': 'first', 'title': 'first', 'weight': sum})\
       .reset_index(drop=True)
-    data['weight'] = data['weight'].map(lambda x: 100 + int(100 * math.log10(x)))
+    data['weight'] = data['weight'].map(lambda x: 1 +  math.log10(x))
 
     # create indexes for matrix
     self.user_mapping = {key: i for i, key in enumerate(data['customer_id'].unique())}
@@ -51,9 +52,12 @@ class Recommender:
       (data['weight'], (data['customer_id'], data['title'])),
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
+
+    U, s, Vh = svds(self.__matrix)
+    print(U)
     print('recommender initialized')
 
-  def make_recommendation(self, user_id):
+  def recommend(self, user_id):
     # TODO make recommendation
     try:
       index = int(user_id) #should use self.user_mapping to get index from user_id in future
@@ -70,4 +74,4 @@ while True:
   if user_input == 'q':
     break
 
-  r.make_recommendation(user_input)
+  r.recommend(user_input)
