@@ -13,7 +13,6 @@ PURCHASE_WEIGHT = 3
 MIN_INTERACTIONS = 5
 
 def searchByKey(lst, val):
-  print(val)
   for key, value in lst.items(): 
          if val == value: 
              return key
@@ -63,8 +62,7 @@ class Recommender:
     nmf = NMF(n_components=50)
     self.user_matrix = nmf.fit_transform(self.matrix)
     self.item_matrix = nmf.components_
-    
-    
+
 
   def recommend(self, user_id):
     try:
