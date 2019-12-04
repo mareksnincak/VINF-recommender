@@ -8,7 +8,7 @@ from scipy.sparse.linalg import svds
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import NMF
 
-IN_FILE = 'data/recent/recent_merged.csv'
+IN_FILE = 'data/recent/recent_merged_hour.csv'
 PURCHASE_WEIGHT = 3
 MIN_INTERACTIONS = 5
 
@@ -49,24 +49,33 @@ class Recommender:
     data['customer_id'] = data['customer_id'].map(lambda x: self.user_mapping[x])
     data['title'] = data['title'].map(lambda x: self.item_mapping[x])
 
-    self.__matrix = csr_matrix(
+    self.matrix = csr_matrix(
       (data['weight'], (data['customer_id'], data['title'])),
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
     nmf = NMF(n_components=50)
-    U = nmf.fit_transform(self.__matrix)
-    I = nmf.components_
-    l = list(enumerate(U[0] @ I))
-    l.sort(key = lambda x: x[1], reverse = True)
-    print(l[:10])
+    self.user_matrix = nmf.fit_transform(self.matrix)
+    self.item_matrix = nmf.components_
+    
     
 
   def recommend(self, user_id):
-    # TODO make recommendation
     try:
-      index = int(user_id) #should use self.user_mapping to get index from user_id in future
-      print(self.__matrix[index])
+      index = int(user_id) # should use self.user_mapping to get index from user_id in future
+      ratings = list(enumerate(self.user_matrix[index] @ self.item_matrix))
+      ratings.sort(key = lambda x: x[1], reverse = True)
+
+      # get array of indexes of items that user already bought
+      user_interactions = self.matrix[index].nonzero()[1]
+
+      # get indexes of top 10 items that are new for user
+      ratings = ratings[:10 + len(user_interactions)]
+      ratings = list(filter(lambda x: x[0] not in user_interactions, ratings))[:10]
+
+      # fix this
+      ratings = list(map(lambda x: item_mapping[x[0]]))
+      print(ratings)
     except:
       print('bad input')
       return
