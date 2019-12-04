@@ -6,8 +6,9 @@ import math
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import svds
 from sklearn.model_selection import train_test_split
+from sklearn.decomposition import NMF
 
-IN_FILE = 'data/recent/recent_merged_hour.csv'
+IN_FILE = 'data/recent/recent_merged.csv'
 PURCHASE_WEIGHT = 3
 MIN_INTERACTIONS = 5
 
@@ -39,7 +40,7 @@ class Recommender:
       .groupby(['customer_id', 'title'])\
       .agg({'customer_id': 'first', 'title': 'first', 'weight': sum})\
       .reset_index(drop=True)
-    data['weight'] = data['weight'].map(lambda x: 1 +  math.log10(x))
+    data['weight'] = data['weight'].map(lambda x: 5 +  math.log10(x))
 
     # create indexes for matrix
     self.user_mapping = {key: i for i, key in enumerate(data['customer_id'].unique())}
@@ -53,9 +54,13 @@ class Recommender:
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
-    U, s, Vh = svds(self.__matrix)
-    print(U)
-    print('recommender initialized')
+    nmf = NMF(n_components=50)
+    U = nmf.fit_transform(self.__matrix)
+    I = nmf.components_
+    l = list(enumerate(U[0] @ I))
+    l.sort(key = lambda x: x[1], reverse = True)
+    print(l[:10])
+    
 
   def recommend(self, user_id):
     # TODO make recommendation
