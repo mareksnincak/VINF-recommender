@@ -12,6 +12,12 @@ IN_FILE = 'data/recent/recent_merged_hour.csv'
 PURCHASE_WEIGHT = 3
 MIN_INTERACTIONS = 5
 
+def searchByKey(lst, val):
+  print(val)
+  for key, value in lst.items(): 
+         if val == value: 
+             return key
+
 class Recommender:
   def __init__(self):
     data = pd.read_csv(IN_FILE, dtype={
@@ -73,9 +79,9 @@ class Recommender:
       ratings = ratings[:10 + len(user_interactions)]
       ratings = list(filter(lambda x: x[0] not in user_interactions, ratings))[:10]
 
-      # fix this
-      ratings = list(map(lambda x: item_mapping[x[0]]))
-      print(ratings)
+      # get item names
+      ratings = list(map(lambda x: searchByKey(self.item_mapping, x[0]), ratings))
+      return ratings
     except:
       print('bad input')
       return
@@ -88,4 +94,4 @@ while True:
   if user_input == 'q':
     break
 
-  r.recommend(user_input)
+  print(r.recommend(user_input))
