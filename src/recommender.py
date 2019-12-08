@@ -10,7 +10,7 @@ from sklearn.decomposition import NMF
 
 # recommeder params
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 5
+MIN_UNIQUE_INTERACTIONS = 8
 NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-60 range
 RECOMMENDATION_COUNT = 10
 BASE_WEIGHT = 3
@@ -44,6 +44,7 @@ class Recommender:
       .agg({'customer_id': 'first', 'product_id': 'first'})\
       .reset_index(drop=True)
     self.most_popular = self.most_popular['product_id'].value_counts().head(RECOMMENDATION_COUNT).keys().tolist()
+    print(self.most_popular)
 
     # filter active only
     customer_activity = data.groupby(['customer_id'])['product_id'].nunique()
