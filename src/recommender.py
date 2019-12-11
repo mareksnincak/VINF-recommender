@@ -3,14 +3,14 @@ import numpy as np
 import pandas as pd
 import math
 
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 from scipy.sparse.linalg import svds
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import NMF
 
 # recommeder params
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 8
+MIN_UNIQUE_INTERACTIONS = 3 # around 8
 NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-60 range
 RECOMMENDATION_COUNT = 10
 BASE_WEIGHT = 3
@@ -20,6 +20,8 @@ def searchByKey(lst, val):
   for key, value in lst.items(): 
     if val == value: 
       return key
+
+import numpy
 
 class Recommender:
   def __init__(self, filename, test = False, test_size = 1000):
@@ -72,10 +74,24 @@ class Recommender:
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
+    R = np.array([
+    [5, 3, 0, 1],
+    [4, 0, 0, 1],
+    [1, 1, 0, 5],
+    [1, 0, 0, 4],
+    [0, 1, 5, 4],
+    ])
+
+    self.matrix = coo_matrix(R)
+
+    print(self.matrix.toarray())
+
     # matrix factorization
     nmf = NMF(n_components=NUMBER_OF_COMPONENTS)
     self.user_matrix = nmf.fit_transform(self.matrix)
     self.item_matrix = nmf.components_
+
+    print(self.user_matrix @ self.item_matrix)
     
     print('initialized')
 
@@ -102,24 +118,23 @@ class Recommender:
     return recommendations
 
   def test(self, user_count):
-    print('precision test')
-    hits = 0
-    predictions = 0
+    print('average precision@k test')
+    precision_sum = 0
 
     user_ids = np.unique(self.testData['customer_id'])[:user_count]
 
     for uid in user_ids:
       recommendations = self.recommend(uid)
 
-      predictions += 1
-
       user_interactions = self.testData[self.testData['customer_id'] == uid]
       user_interactions = np.unique(user_interactions['product_id']).tolist()
 
+      hits = 0
       for r in recommendations:
         if r in user_interactions:
           hits += 1
-          break
 
-    print(hits / predictions)
+      precision_sum = precision_sum + (hits / len(recommendations)) 
+
+    print(precision_sum / len(user_ids))
     return

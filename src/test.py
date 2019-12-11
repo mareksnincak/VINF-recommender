@@ -3,7 +3,7 @@ import pandas as pd
 
 from recommender import Recommender
 
-IN_FILE = 'data/merged/merged.csv'
+IN_FILE = 'data/recent/recent_merged_100.csv'
 
 # testing params
 TEST = False
