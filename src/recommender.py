@@ -4,7 +4,6 @@ import pandas as pd
 import math
 
 from scipy.sparse import csr_matrix, coo_matrix
-from scipy.sparse.linalg import svds
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import NMF
 
@@ -75,7 +74,7 @@ class Recommender:
     )
 
     R = np.array([
-    [5.0, 3, 0, 1],
+    [5, 3, 0, 1],
     [4, 0, 0, 1],
     [1, 1, 0, 5],
     [1, 0, 0, 4],
@@ -92,12 +91,6 @@ class Recommender:
     self.item_matrix = nmf.components_
 
     print(self.user_matrix @ self.item_matrix)
-
-    u, s, i = svds(R, k=3)
-    diagonal = diag(s)
-
-    a = u @ diagonal @ i
-    print(a)
     
     print('initialized')
 
