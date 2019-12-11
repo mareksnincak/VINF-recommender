@@ -44,7 +44,6 @@ class Recommender:
       .agg({'customer_id': 'first', 'product_id': 'first'})\
       .reset_index(drop=True)
     self.most_popular = self.most_popular['product_id'].value_counts().head(RECOMMENDATION_COUNT).keys().tolist()
-    print(self.most_popular)
 
     # filter active only
     customer_activity = data.groupby(['customer_id'])['product_id'].nunique()
