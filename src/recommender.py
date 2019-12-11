@@ -92,6 +92,12 @@ class Recommender:
     self.item_matrix = nmf.components_
 
     print(self.user_matrix @ self.item_matrix)
+
+    u, s, i = svds(R, k=3)
+    diagonal = diag(s)
+
+    a = u @ diagonal @ i
+    print(a)
     
     print('initialized')
 
