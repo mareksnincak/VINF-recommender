@@ -10,7 +10,7 @@ from sklearn.decomposition import NMF
 
 # recommeder params
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 3 # around 8
+MIN_UNIQUE_INTERACTIONS = 2 # around 8
 NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-60 range
 RECOMMENDATION_COUNT = 10
 BASE_WEIGHT = 3
@@ -103,6 +103,19 @@ class Recommender:
     except:
       return self.most_popular
 
+    most_similar = None
+    for user_index in self.user_mapping:
+      if user_index == index:
+        continue
+      print(len(self.matrix[index].toarray()[0]))
+      d = distance.euclidean([0,0,1], [1,0,0])
+      if most_similar == None or d < most_similar[1]:
+        most_similar = (user_index, d)
+        
+
+    print(most_similar)
+    
+    return
     recommendations = list(enumerate(self.user_matrix[index] @ self.item_matrix))
     recommendations.sort(key = lambda x: x[1], reverse = True)
 

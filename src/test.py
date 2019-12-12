@@ -6,7 +6,7 @@ from recommender import Recommender
 IN_FILE = 'data/recent/recent_merged_100.csv'
 
 # testing params
-TEST = False
+TEST = True
 TEST_USER_COUNT = 1000
 TEST_SIZE = 1 / 7 # 1 / 60 - adjust so data in test sample are from around one day
 
