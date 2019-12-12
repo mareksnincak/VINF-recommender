@@ -6,15 +6,14 @@ import math
 from scipy.sparse import csr_matrix, coo_matrix, csc_matrix
 from scipy.spatial import distance
 from sklearn.model_selection import train_test_split
-from sklearn.decomposition import NMF
 
 # recommeder params
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 3 # around 8
+MIN_UNIQUE_INTERACTIONS = 8 # around 8
 NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-60 range
 RECOMMENDATION_COUNT = 10
-BASE_WEIGHT = 3
-MAX_WEIGHT = 5
+BASE_WEIGHT = 7
+MAX_WEIGHT = 10
 
 def searchByKey(lst, val):
   for key, value in lst.items(): 
@@ -58,7 +57,7 @@ class Recommender:
       .groupby(['customer_id', 'product_id'])\
       .agg({'customer_id': 'first', 'product_id': 'first', 'weight': sum})\
       .reset_index(drop=True)
-    data['weight'] = data['weight'].map(lambda x: min(BASE_WEIGHT +  math.log10(x), MAX_WEIGHT))
+    data['weight'] = data['weight'].map(lambda x: min(BASE_WEIGHT +  2 * math.log10(x), MAX_WEIGHT))
 
     # create indexes for matrix
     self.user_mapping = {key: i for i, key in enumerate(data['customer_id'].unique())}
@@ -72,7 +71,24 @@ class Recommender:
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
-    # TODO - solve issue, NMF takes missing values as zeroso reconstructed values aren't predictions but values around zero
+     """ # matrix factorization
+    import implicit
+    
+    self.user_matrix, self.item_matrix = implicit.alternating_least_squares(
+      self.matrix, 
+      factors=NUMBER_OF_COMPONENTS, 
+      regularization = 0.1, 
+      iterations = 50)
+
+    self.item_matrix = np.transpose(self.item_matrix) """
+
+    """ model = implicit.als.AlternatingLeastSquares(factors=15)
+    model.fit(self.matrix, show_progress=True)
+
+    self.user_matrix = model.item_factors
+    self.item_matrix = np.transpose(model.user_factors)
+    print(self.user_matrix.shape)
+    print(self.user_matrix @ self.item_matrix) """
 
     """ R = np.array([
     [5, 3, 0, 1],
@@ -87,6 +103,7 @@ class Recommender:
     print(self.matrix.toarray())
 
     # matrix factorization
+    from sklearn.decomposition import NMF
     nmf = NMF(n_components=NUMBER_OF_COMPONENTS)
     self.user_matrix = nmf.fit_transform(self.matrix)
     self.item_matrix = nmf.components_
@@ -108,6 +125,10 @@ class Recommender:
 
     # get array of indexes of items that user already bought
     user_interactions = self.matrix[index].nonzero()[1]
+    """ 
+    i = list(map(lambda x: searchByKey(self.item_mapping, x), user_interactions))
+    print(i) 
+    """
 
     # get indexes of top RECOMMENDATION_COUNT items that are new for user
     recommendations = recommendations[:RECOMMENDATION_COUNT + len(user_interactions)]
