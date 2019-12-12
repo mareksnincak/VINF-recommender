@@ -15,6 +15,7 @@ NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-
 RECOMMENDATION_COUNT = 10
 BASE_WEIGHT = 3
 MAX_WEIGHT = 5
+MOST_SIMILAR = 10
 
 def searchByKey(lst, val):
   for key, value in lst.items(): 
@@ -103,19 +104,34 @@ class Recommender:
     except:
       return self.most_popular
 
-    most_similar = None
-    for user_index in self.user_mapping:
+    # get k most similar users
+    similarities = []
+    for user_index in self.user_mapping.values():
       if user_index == index:
         continue
-      print(len(self.matrix[index].toarray()[0]))
-      d = distance.euclidean([0,0,1], [1,0,0])
-      if most_similar == None or d < most_similar[1]:
-        most_similar = (user_index, d)
-        
-
-    print(most_similar)
+      d = distance.euclidean(self.matrix[index].toarray()[0], self.matrix[user_index].toarray()[0])
+      similarities.append((user_index, d))
     
-    return
+    similarities.sort(key = lambda x: x[1])
+    similar_users = [x[0] for x in similarities[:MOST_SIMILAR]]
+
+    # calculate score as avg from their ratings
+    score = self.matrix[similar_users[0]]
+    for u in similar_users[1:]:
+      score = score + self.matrix[u]
+    score = score / len(similar_users)
+
+    # get array of indexes of items that user already bought
+    user_interactions = self.matrix[index].nonzero()[1]
+
+    # get indexes of best RECOMMENDATION_COUNT avg scores of items new to user
+    recommendations = score.toarray()[0].argsort()[::-1][:RECOMMENDATION_COUNT + len(user_interactions)]
+    recommendations = list(filter(lambda x: x not in user_interactions, recommendations))[:RECOMMENDATION_COUNT]
+
+    # get item names
+    recommendations = list(map(lambda x: searchByKey(self.item_mapping, x), recommendations))
+    return recommendations
+
     recommendations = list(enumerate(self.user_matrix[index] @ self.item_matrix))
     recommendations.sort(key = lambda x: x[1], reverse = True)
 
