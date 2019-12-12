@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 import math
 
-from scipy.sparse import csr_matrix, coo_matrix
+from scipy.sparse import csr_matrix, coo_matrix, csc_matrix
+from scipy.spatial import distance
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import NMF
 
@@ -19,8 +20,6 @@ def searchByKey(lst, val):
   for key, value in lst.items(): 
     if val == value: 
       return key
-
-import numpy
 
 class Recommender:
   def __init__(self, filename, test = False, test_size = 1000):
@@ -73,7 +72,9 @@ class Recommender:
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
-    R = np.array([
+    # TODO - solve issue, NMF takes missing values as zeroso reconstructed values aren't predictions but values around zero
+
+    """ R = np.array([
     [5, 3, 0, 1],
     [4, 0, 0, 1],
     [1, 1, 0, 5],
@@ -81,7 +82,7 @@ class Recommender:
     [0, 1, 5, 4],
     ])
 
-    self.matrix = coo_matrix(R)
+    self.matrix = csr_matrix(R)
 
     print(self.matrix.toarray())
 
@@ -90,8 +91,8 @@ class Recommender:
     self.user_matrix = nmf.fit_transform(self.matrix)
     self.item_matrix = nmf.components_
 
-    print(self.user_matrix @ self.item_matrix)
-    
+    print(self.user_matrix @ self.item_matrix) """
+
     print('initialized')
 
 
