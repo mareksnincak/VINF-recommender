@@ -7,15 +7,16 @@ from scipy.sparse import csr_matrix, coo_matrix, csc_matrix
 from scipy.spatial import distance
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import NMF
+from sklearn.metrics.pairwise import cosine_similarity
 
 # recommeder params
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 2 # around 8
+MIN_UNIQUE_INTERACTIONS = 6 # around 8
 NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-60 range
 RECOMMENDATION_COUNT = 10
 BASE_WEIGHT = 3
 MAX_WEIGHT = 5
-MOST_SIMILAR = 10
+MOST_SIMILAR = 20
 
 def searchByKey(lst, val):
   for key, value in lst.items(): 
@@ -86,14 +87,14 @@ class Recommender:
     self.matrix = csr_matrix(R)
 
     print(self.matrix.toarray())
-
     # matrix factorization
     nmf = NMF(n_components=NUMBER_OF_COMPONENTS)
     self.user_matrix = nmf.fit_transform(self.matrix)
     self.item_matrix = nmf.components_
 
-    print(self.user_matrix @ self.item_matrix) """
-
+    #print(self.user_matrix @ self.item_matrix) 
+    print(self.user_matrix.shape)
+    """
     print('initialized')
 
 
@@ -105,7 +106,9 @@ class Recommender:
       return self.most_popular
 
     # get k most similar users
-    similarities = []
+    similarities = cosine_similarity(self.matrix[index], self.matrix)[0]
+    similar_users = np.argsort(similarities)[::-1][:MOST_SIMILAR + 1]
+    """  similarities = []
     for user_index in self.user_mapping.values():
       if user_index == index:
         continue
@@ -113,25 +116,24 @@ class Recommender:
       similarities.append((user_index, d))
     
     similarities.sort(key = lambda x: x[1])
-    similar_users = [x[0] for x in similarities[:MOST_SIMILAR]]
-
-    # calculate score as avg from their ratings
-    score = self.matrix[similar_users[0]]
-    for u in similar_users[1:]:
-      score = score + self.matrix[u]
-    score = score / len(similar_users)
+    similar_users = [x[0] for x in similarities[:MOST_SIMILAR]] """
+    # calculate score as sum from their ratings
+    score = self.matrix[similar_users[1]].toarray()[0]
+    for u in similar_users[2:]:
+      score = score + np.array(self.matrix[u].toarray()[0])
 
     # get array of indexes of items that user already bought
     user_interactions = self.matrix[index].nonzero()[1]
 
     # get indexes of best RECOMMENDATION_COUNT avg scores of items new to user
-    recommendations = score.toarray()[0].argsort()[::-1][:RECOMMENDATION_COUNT + len(user_interactions)]
+    recommendations = score.argsort()[::-1][:RECOMMENDATION_COUNT + len(user_interactions)]
     recommendations = list(filter(lambda x: x not in user_interactions, recommendations))[:RECOMMENDATION_COUNT]
 
     # get item names
     recommendations = list(map(lambda x: searchByKey(self.item_mapping, x), recommendations))
     return recommendations
 
+    """ mf recommendations
     recommendations = list(enumerate(self.user_matrix[index] @ self.item_matrix))
     recommendations.sort(key = lambda x: x[1], reverse = True)
 
@@ -145,6 +147,7 @@ class Recommender:
     # get item names
     recommendations = list(map(lambda x: searchByKey(self.item_mapping, x[0]), recommendations))
     return recommendations
+    """
 
   def test(self, user_count):
     print('average precision@k test')
