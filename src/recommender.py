@@ -6,13 +6,11 @@ import math
 from scipy.sparse import csr_matrix, coo_matrix, csc_matrix
 from scipy.spatial import distance
 from sklearn.model_selection import train_test_split
-from sklearn.decomposition import NMF
 from sklearn.metrics.pairwise import cosine_similarity
 
 # recommeder params
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 5 # around 8
-NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-60 range
+MIN_UNIQUE_INTERACTIONS = 10 # around 8
 RECOMMENDATION_COUNT = 10
 BASE_WEIGHT = 3
 MAX_WEIGHT = 5
@@ -74,27 +72,12 @@ class Recommender:
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
-    # TODO - solve issue, NMF takes missing values as zeros reconstructed values aren't predictions but values around zero
+    """ print(self.matrix[:, 0])
+    print(searchByKey(self.item_mapping, 0))
+    while True:
+      user_input = input('u: ')
+      print(searchByKey(self.user_mapping, int(user_input))) """
 
-    """ R = np.array([
-    [5, 3, 0, 1],
-    [4, 0, 0, 1],
-    [1, 1, 0, 5],
-    [1, 0, 0, 4],
-    [0, 1, 5, 4],
-    ])
-
-    self.matrix = csr_matrix(R)
-
-    print(self.matrix.toarray())
-    # matrix factorization
-    nmf = NMF(n_components=NUMBER_OF_COMPONENTS)
-    self.user_matrix = nmf.fit_transform(self.matrix)
-    self.item_matrix = nmf.components_
-
-    #print(self.user_matrix @ self.item_matrix) 
-    print(self.user_matrix.shape)
-    """
     print('initialized')
 
 
@@ -104,25 +87,18 @@ class Recommender:
       index = self.user_mapping[user_id]
     except:
       return self.most_popular
+
     # get k most similar users
     similarities = cosine_similarity(self.matrix[index], self.matrix)[0]
     similar_users = np.argsort(similarities)[::-1][:MOST_SIMILAR + 1]
 
-    """  similarities = []
-    for user_index in self.user_mapping.values():
-      if user_index == index:
-        continue
-      d = distance.euclidean(self.matrix[index].toarray()[0], self.matrix[user_index].toarray()[0])
-      similarities.append((user_index, d))
-    
-    similarities.sort(key = lambda x: x[1])
-    similar_users = [x[0] for x in similarities[:MOST_SIMILAR]] """
     # calculate score as sum from their ratings divided by 1 - their similarity
-    similar_users = similar_users[1:]
-    score = self.matrix[similar_users[0]].toarray()[0]
+    # similar_users = similar_users[1:]
+    score = self.matrix[similar_users[1]].toarray()[0]
     for u in similar_users[1:]:
-      if similarities[u] == 0:
+      if similarities[u] == 0 or similarities[u] >= 1:
         continue
+
       score = score + np.array(np.divide(self.matrix[u].toarray()[0], 1 - similarities[u]))
 
     # get array of indexes of items that user has already interacted with
@@ -131,36 +107,33 @@ class Recommender:
     # get indexes of best RECOMMENDATION_COUNT scores of items new to user
     recommendations = score.argsort()[::-1][:RECOMMENDATION_COUNT + len(user_interactions)]
     recommendations = list(filter(lambda x: x not in user_interactions, recommendations))[:RECOMMENDATION_COUNT]
+    """ print(recommendations)
+    while True:
+      user_input = input('p: ')
+      if user_input == 'q':
+        break
+      print(searchByKey(self.item_mapping, int(user_input))) """
 
     # get item names
     recommendations = list(map(lambda x: searchByKey(self.item_mapping, x), recommendations))
+
     return recommendations
-
-    """ mf recommendations
-    recommendations = list(enumerate(self.user_matrix[index] @ self.item_matrix))
-    recommendations.sort(key = lambda x: x[1], reverse = True)
-
-    # get array of indexes of items that user already bought
-    user_interactions = self.matrix[index].nonzero()[1]
-
-    # get indexes of top RECOMMENDATION_COUNT items that are new for user
-    recommendations = recommendations[:RECOMMENDATION_COUNT + len(user_interactions)]
-    recommendations = list(filter(lambda x: x[0] not in user_interactions, recommendations))[:RECOMMENDATION_COUNT]
-
-    # get item names
-    recommendations = list(map(lambda x: searchByKey(self.item_mapping, x[0]), recommendations))
-    return recommendations
-    """
 
   def test(self, user_count):
     print('average precision@k test')
     precision_sum = 0
-    user_ids = np.unique(self.testData['customer_id'])[:user_count]
+    predictions = 0
+    user_ids = np.unique(self.testData['customer_id'])
     for uid in user_ids:
+      if predictions == user_count:
+        break
+      # skip most popular
       try:
         self.user_mapping[uid]
       except:
         continue
+
+      predictions += 1
       recommendations = self.recommend(uid)
 
       user_interactions = self.testData[self.testData['customer_id'] == uid]
@@ -173,5 +146,6 @@ class Recommender:
 
       precision_sum = precision_sum + (hits / len(recommendations)) 
 
-    print(precision_sum / len(user_ids))
+    print(predictions)
+    print(precision_sum / predictions)
     return
