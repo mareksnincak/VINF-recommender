@@ -11,7 +11,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # recommeder params
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 6 # around 8
+MIN_UNIQUE_INTERACTIONS = 5 # around 8
 NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-60 range
 RECOMMENDATION_COUNT = 10
 BASE_WEIGHT = 3
@@ -24,7 +24,7 @@ def searchByKey(lst, val):
       return key
 
 class Recommender:
-  def __init__(self, filename, test = False, test_size = 1000):
+  def __init__(self, filename, test = False, test_size = 1 / 60):
     print('initializing recommender')
     data = pd.read_csv(filename, dtype={
       'customer_id': object,
@@ -38,7 +38,7 @@ class Recommender:
 
     # test train split
     if test:
-      data, self.testData = train_test_split(data.sort_values(by=['timestamp']), test_size=test_size)
+      data, self.testData = train_test_split(data.sort_values(by=['timestamp']), shuffle = False, test_size=test_size)
 
     # most popular
     self.most_popular = data\
@@ -60,7 +60,7 @@ class Recommender:
       .groupby(['customer_id', 'product_id'])\
       .agg({'customer_id': 'first', 'product_id': 'first', 'weight': sum})\
       .reset_index(drop=True)
-    data['weight'] = data['weight'].map(lambda x: min(BASE_WEIGHT +  math.log10(x), MAX_WEIGHT))
+    data['weight'] = data['weight'].map(lambda x: min(BASE_WEIGHT +  math.log(x), MAX_WEIGHT))
 
     # create indexes for matrix
     self.user_mapping = {key: i for i, key in enumerate(data['customer_id'].unique())}
@@ -74,7 +74,7 @@ class Recommender:
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
-    # TODO - solve issue, NMF takes missing values as zeroso reconstructed values aren't predictions but values around zero
+    # TODO - solve issue, NMF takes missing values as zeros reconstructed values aren't predictions but values around zero
 
     """ R = np.array([
     [5, 3, 0, 1],
@@ -104,10 +104,10 @@ class Recommender:
       index = self.user_mapping[user_id]
     except:
       return self.most_popular
-
     # get k most similar users
     similarities = cosine_similarity(self.matrix[index], self.matrix)[0]
     similar_users = np.argsort(similarities)[::-1][:MOST_SIMILAR + 1]
+
     """  similarities = []
     for user_index in self.user_mapping.values():
       if user_index == index:
@@ -117,15 +117,18 @@ class Recommender:
     
     similarities.sort(key = lambda x: x[1])
     similar_users = [x[0] for x in similarities[:MOST_SIMILAR]] """
-    # calculate score as sum from their ratings
-    score = self.matrix[similar_users[1]].toarray()[0]
-    for u in similar_users[2:]:
-      score = score + np.array(self.matrix[u].toarray()[0])
+    # calculate score as sum from their ratings divided by 1 - their similarity
+    similar_users = similar_users[1:]
+    score = self.matrix[similar_users[0]].toarray()[0]
+    for u in similar_users[1:]:
+      if similarities[u] == 0:
+        continue
+      score = score + np.array(np.divide(self.matrix[u].toarray()[0], 1 - similarities[u]))
 
-    # get array of indexes of items that user already bought
+    # get array of indexes of items that user has already interacted with
     user_interactions = self.matrix[index].nonzero()[1]
 
-    # get indexes of best RECOMMENDATION_COUNT avg scores of items new to user
+    # get indexes of best RECOMMENDATION_COUNT scores of items new to user
     recommendations = score.argsort()[::-1][:RECOMMENDATION_COUNT + len(user_interactions)]
     recommendations = list(filter(lambda x: x not in user_interactions, recommendations))[:RECOMMENDATION_COUNT]
 
@@ -152,10 +155,12 @@ class Recommender:
   def test(self, user_count):
     print('average precision@k test')
     precision_sum = 0
-
     user_ids = np.unique(self.testData['customer_id'])[:user_count]
-
     for uid in user_ids:
+      try:
+        self.user_mapping[uid]
+      except:
+        continue
       recommendations = self.recommend(uid)
 
       user_interactions = self.testData[self.testData['customer_id'] == uid]
