@@ -3,12 +3,12 @@ import pandas as pd
 
 from recommender import Recommender
 
-IN_FILE = 'data/recent/recent_merged_day.csv'
+IN_FILE = 'data/recent/recent_merged.csv'
 
 # testing params
-TEST = False
+TEST = True
 TEST_USER_COUNT = 1000
-TEST_SIZE = 1 / 60 # 1 / 60 - adjust so data in test sample are from around one day
+TEST_SIZE = 1 / 7 # 1 / 60 - adjust so data in test sample are from around one day
 
 r = Recommender(IN_FILE, TEST, TEST_SIZE)
 

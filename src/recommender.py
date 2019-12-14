@@ -35,7 +35,7 @@ class Recommender:
 
     # test train split
     if test:
-      data, self.testData = train_test_split(data.sort_values(by=['timestamp']), test_size=test_size)
+      data, self.testData = train_test_split(data.sort_values(by=['timestamp']), shuffle = False, test_size=test_size)
 
     # most popular
     self.most_popular = data\
@@ -71,7 +71,7 @@ class Recommender:
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
-     """ # matrix factorization
+    # matrix factorization
     import implicit
     
     self.user_matrix, self.item_matrix = implicit.alternating_least_squares(
@@ -80,7 +80,7 @@ class Recommender:
       regularization = 0.1, 
       iterations = 50)
 
-    self.item_matrix = np.transpose(self.item_matrix) """
+    self.item_matrix = np.transpose(self.item_matrix)
 
     """ model = implicit.als.AlternatingLeastSquares(factors=15)
     model.fit(self.matrix, show_progress=True)
@@ -145,6 +145,10 @@ class Recommender:
     user_ids = np.unique(self.testData['customer_id'])[:user_count]
 
     for uid in user_ids:
+      try:
+        self.user_mapping[uid]
+      except:
+        continue
       recommendations = self.recommend(uid)
 
       user_interactions = self.testData[self.testData['customer_id'] == uid]
