@@ -11,11 +11,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 # recommeder params
 RECOMMENDATION_COUNT = 10
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 3
+MIN_UNIQUE_INTERACTIONS = 1
 BASE_WEIGHT = 3
 MAX_WEIGHT = 3.5
-MOST_SIMILAR = 40
-MIN_SIMILARITY = 0.05
+MOST_SIMILAR = 700
+
+EXACT_INTERACTIONS_COUNT = None # has to be >= MIN_UNIQUE_INTERACTIONS, just for testing
+# MIN_SIMILARITY = 0.05 - probably overfitting
 # MAX_SIMILARITY_DIFF = 0.5 - probably overfitting
 
 def searchByKey(lst, val):
@@ -39,6 +41,8 @@ class Recommender:
     # test train split
     if test:
       data, self.testData = train_test_split(data.sort_values(by=['timestamp']), shuffle = False, test_size=test_size)
+      if EXACT_INTERACTIONS_COUNT:
+        self.data = data
 
     # most popular
     self.most_popular = data\
@@ -74,6 +78,8 @@ class Recommender:
       shape=(len(self.user_mapping), len(self.item_mapping))
     )
 
+    print(self.matrix.shape)
+
     """ print(self.matrix[:, 0])
     print(searchByKey(self.item_mapping, 0))
     while True:
@@ -84,8 +90,8 @@ class Recommender:
 
 
   def recommend(self, user_id):
-    #return self.most_popular
-    #print("Recommending for: ", user_id)
+    # return self.most_popular
+    print("Recommending for: ", user_id)
     # map id to index
     try:
       index = self.user_mapping[user_id]
@@ -100,7 +106,7 @@ class Recommender:
     # similar_users = similar_users[1:]
     score = self.matrix[similar_users[1]].toarray()[0]
     for u in similar_users[1:]:
-      if similarities[u] < MIN_SIMILARITY: # or similarities[similar_users[1]] - similarities[u] > MAX_SIMILARITY_DIFF
+      if similarities[u] == 0: # < MIN_SIMILARITY: # or similarities[similar_users[1]] - similarities[u] > MAX_SIMILARITY_DIFF
         break
       if similarities[u] >= 1:
         continue
@@ -151,6 +157,12 @@ class Recommender:
       except:
         continue
 
+      if EXACT_INTERACTIONS_COUNT:
+        past_user_interactions = self.data[self.data['customer_id'] == uid]
+        past_user_interactions_count = len(np.unique(past_user_interactions['product_id']))
+        if past_user_interactions_count != EXACT_INTERACTIONS_COUNT:
+          continue
+
       predictions += 1
       recommendations = self.recommend(uid)
 
@@ -173,6 +185,8 @@ class Recommender:
       precision_sum = precision_sum + (hits / len(recommendations))
 
     print('Number of predictions:', predictions)
+    if not predictions:
+      return
     print('Average precision@k:', precision_sum / predictions)
     print('Average dcg@k:', dcg_sum / predictions)
     return
