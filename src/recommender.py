@@ -1,4 +1,3 @@
-# evaluation - Precision,  Precision@k, nDCG
 import numpy as np
 import pandas as pd
 import math
@@ -40,9 +39,7 @@ class Recommender:
 
     # test train split
     if test:
-      data, self.testData = train_test_split(data.sort_values(by=['timestamp']), shuffle = False, test_size=test_size)
-      if EXACT_INTERACTIONS_COUNT:
-        self.data = data
+      data, self.test_data = train_test_split(data.sort_values(by=['timestamp']), shuffle = False, test_size=test_size)
 
     # most popular
     self.most_popular = data\
@@ -53,6 +50,9 @@ class Recommender:
 
     # filter active only
     customer_activity = data.groupby(['customer_id'])['product_id'].nunique()
+    # save user activity
+    if test and EXACT_INTERACTIONS_COUNT:
+      self.customer_activity = customer_activity
     active_customers = customer_activity[customer_activity >= MIN_UNIQUE_INTERACTIONS]
     data = data[data['customer_id'].isin(active_customers.index)]
 
@@ -102,7 +102,7 @@ class Recommender:
     similarities = cosine_similarity(self.matrix[index], self.matrix)[0]
     similar_users = np.argsort(similarities)[::-1][:MOST_SIMILAR + 1]
 
-    # calculate score as sum from their ratings divided by 1 - their similarity
+    # calculate score as sum from their ratings multiplied by their similarity
     # similar_users = similar_users[1:]
     score = self.matrix[similar_users[1]].toarray()[0]
     for u in similar_users[1:]:
@@ -110,7 +110,7 @@ class Recommender:
         break
       if similarities[u] >= 1:
         continue
-      score = score + np.array(np.divide(self.matrix[u].toarray()[0], 1 - similarities[u]))
+      score = score + np.array(np.multiply(self.matrix[u].toarray()[0], similarities[u]))
 
     # get array of indexes of items that user has already interacted with
     user_interactions = self.matrix[index].nonzero()[1]
@@ -146,7 +146,7 @@ class Recommender:
     precision_sum = 0
     dcg_sum = 0
     predictions = 0
-    user_ids = np.unique(self.testData['customer_id'])
+    user_ids = np.unique(self.test_data['customer_id'])
     for uid in user_ids:
       if predictions == user_count:
         break
@@ -158,15 +158,14 @@ class Recommender:
         continue
 
       if EXACT_INTERACTIONS_COUNT:
-        past_user_interactions = self.data[self.data['customer_id'] == uid]
-        past_user_interactions_count = len(np.unique(past_user_interactions['product_id']))
-        if past_user_interactions_count != EXACT_INTERACTIONS_COUNT:
+        if self.customer_activity[uid] < EXACT_INTERACTIONS_COUNT:
           continue
+        print(self.customer_activity[uid])
 
       predictions += 1
       recommendations = self.recommend(uid)
 
-      user_interactions = self.testData[self.testData['customer_id'] == uid]
+      user_interactions = self.test_data[self.test_data['customer_id'] == uid]
       user_interactions = np.unique(user_interactions['product_id']).tolist()
 
       hits = 0
