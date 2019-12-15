@@ -9,11 +9,13 @@ from sklearn.model_selection import train_test_split
 
 # recommeder params
 PURCHASE_WEIGHT = 3
-MIN_UNIQUE_INTERACTIONS = 8 # around 8
-NUMBER_OF_COMPONENTS = 60 # seems like the best results are somewhere around 50-60 range
+MIN_UNIQUE_INTERACTIONS = 5 # around 8
+NUMBER_OF_COMPONENTS = 150 # seems like the best results are somewhere around 50-60 range
 RECOMMENDATION_COUNT = 10
-BASE_WEIGHT = 7
-MAX_WEIGHT = 10
+BASE_WEIGHT = 3
+MAX_WEIGHT = 3.5
+
+EXACT_INTERACTIONS_COUNT = 5 # has to be >= MIN_UNIQUE_INTERACTIONS, just for testing
 
 def searchByKey(lst, val):
   for key, value in lst.items(): 
@@ -35,7 +37,7 @@ class Recommender:
 
     # test train split
     if test:
-      data, self.testData = train_test_split(data.sort_values(by=['timestamp']), shuffle = False, test_size=test_size)
+      data, self.test_data = train_test_split(data.sort_values(by=['timestamp']), shuffle = False, test_size=test_size)
 
     # most popular
     self.most_popular = data\
@@ -44,8 +46,11 @@ class Recommender:
       .reset_index(drop=True)
     self.most_popular = self.most_popular['product_id'].value_counts().head(RECOMMENDATION_COUNT).keys().tolist()
 
-    # filter active only
+     # filter active only
     customer_activity = data.groupby(['customer_id'])['product_id'].nunique()
+    # save user activity
+    if test and EXACT_INTERACTIONS_COUNT:
+      self.customer_activity = customer_activity
     active_customers = customer_activity[customer_activity >= MIN_UNIQUE_INTERACTIONS]
     data = data[data['customer_id'].isin(active_customers.index)]
 
@@ -139,27 +144,50 @@ class Recommender:
     return recommendations
 
   def test(self, user_count):
-    print('average precision@k test')
+    print('Average precision@k and dcg@k test')
     precision_sum = 0
-
-    user_ids = np.unique(self.testData['customer_id'])[:user_count]
-
+    dcg_sum = 0
+    predictions = 0
+    user_ids = np.unique(self.test_data['customer_id'])
     for uid in user_ids:
+      if predictions == user_count:
+        break
+
+      # skip ones without ranking (they would get most popular items)
       try:
         self.user_mapping[uid]
       except:
         continue
+
+      if EXACT_INTERACTIONS_COUNT:
+        if self.customer_activity[uid] < EXACT_INTERACTIONS_COUNT:
+          continue
+        # print(self.customer_activity[uid])
+
+      predictions += 1
       recommendations = self.recommend(uid)
 
-      user_interactions = self.testData[self.testData['customer_id'] == uid]
+      user_interactions = self.test_data[self.test_data['customer_id'] == uid]
       user_interactions = np.unique(user_interactions['product_id']).tolist()
 
       hits = 0
+      index = 0
+      dcg = 0
       for r in recommendations:
+        index += 1
         if r in user_interactions:
           hits += 1
+          if index == 1:
+            dcg += 1
+            continue
+          dcg += 1 / math.log(index)
+          
+      dcg_sum = dcg_sum + dcg
+      precision_sum = precision_sum + (hits / len(recommendations))
 
-      precision_sum = precision_sum + (hits / len(recommendations)) 
-
-    print(precision_sum / len(user_ids))
+    print('Number of predictions:', predictions)
+    if not predictions:
+      return
+    print('Average precision@k:', precision_sum / predictions)
+    print('Average dcg@k:', dcg_sum / predictions)
     return
