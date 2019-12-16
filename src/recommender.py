@@ -12,7 +12,7 @@ RECOMMENDATION_COUNT = 10
 PURCHASE_WEIGHT = 3
 MIN_UNIQUE_INTERACTIONS = 1
 BASE_WEIGHT = 3
-MAX_WEIGHT = 3.5
+MAX_WEIGHT = 5
 MOST_SIMILAR = 700
 
 EXACT_INTERACTIONS_COUNT = None # has to be >= MIN_UNIQUE_INTERACTIONS, just for testing
@@ -105,7 +105,7 @@ class Recommender:
     # calculate score as sum from their ratings multiplied by their similarity
     # similar_users = similar_users[1:]
     score = self.matrix[similar_users[1]].toarray()[0]
-    for u in similar_users[1:]:
+    for u in similar_users[2:]:
       if similarities[u] == 0: # < MIN_SIMILARITY: # or similarities[similar_users[1]] - similarities[u] > MAX_SIMILARITY_DIFF
         break
       if similarities[u] >= 1:
@@ -158,7 +158,7 @@ class Recommender:
         continue
 
       if EXACT_INTERACTIONS_COUNT:
-        if self.customer_activity[uid] < EXACT_INTERACTIONS_COUNT:
+        if self.customer_activity[uid] != EXACT_INTERACTIONS_COUNT:
           continue
         print(self.customer_activity[uid])
 
