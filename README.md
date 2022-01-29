@@ -1,3 +1,3 @@
 # VINF-recommender
 
-Recommendation engine to recommend e-commerce products
+E-commerce products recommender system
